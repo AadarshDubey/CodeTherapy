@@ -1,0 +1,94 @@
+/* RewardMeter.css */
+.reward-meter {
+  padding: var(--space-lg);
+  animation: fadeIn var(--transition-slow) ease-out;
+}
+
+.reward-meter-title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-lg);
+}
+
+.reward-meter-gauge {
+  position: relative;
+  width: 160px;
+  height: 160px;
+  margin: 0 auto var(--space-lg);
+}
+
+.reward-meter-circle {
+  transform: rotate(-90deg);
+}
+
+.reward-meter-bg {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.05);
+  stroke-width: 8;
+}
+
+.reward-meter-fill {
+  fill: none;
+  stroke-width: 8;
+  stroke-linecap: round;
+  transition: stroke-dashoffset var(--transition-slow), stroke var(--transition-slow);
+}
+
+.reward-meter-value {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+}
+
+.reward-meter-number {
+  font-size: 2rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.reward-meter-label {
+  font-size: 0.7rem;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-top: 4px;
+}
+
+.reward-meter-breakdown {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-sm);
+}
+
+.reward-meter-item {
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-sm) var(--space-md);
+  text-align: center;
+}
+
+.reward-meter-item-value {
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.reward-meter-item-label {
+  font-size: 0.68rem;
+  color: var(--color-text-muted);
+  margin-top: 2px;
+}
+
+.reward-color-code {
+  color: var(--color-accent-400);
+}
+
+.reward-color-reflection {
+  color: var(--color-primary-300);
+}

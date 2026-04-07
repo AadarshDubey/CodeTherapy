@@ -1,0 +1,40 @@
+/* RewardChart.css */
+.reward-chart {
+  padding: var(--space-lg);
+  animation: fadeIn var(--transition-slow) ease-out;
+}
+
+.reward-chart-title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-md);
+}
+
+.reward-chart-container {
+  height: 200px;
+  width: 100%;
+}
+
+.reward-chart-empty {
+  height: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-muted);
+  font-size: 0.85rem;
+}
+
+/* Recharts custom styling */
+.recharts-cartesian-grid-horizontal line,
+.recharts-cartesian-grid-vertical line {
+  stroke: rgba(255, 255, 255, 0.05);
+}
+
+.recharts-text {
+  fill: var(--color-text-muted);
+  font-size: 0.72rem;
+}

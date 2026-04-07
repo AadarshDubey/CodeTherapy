@@ -1,0 +1,83 @@
+/* ReflectionPanel.css */
+.reflection-panel {
+  padding: var(--space-lg);
+  animation: fadeIn var(--transition-slow) ease-out;
+}
+
+.reflection-panel-title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-md);
+}
+
+.reflection-section {
+  margin-bottom: var(--space-md);
+  padding: var(--space-md);
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  transition: border-color var(--transition-fast);
+}
+
+.reflection-section:hover {
+  border-color: var(--color-border-active);
+}
+
+.reflection-section-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: var(--space-xs);
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.reflection-label-hypothesis {
+  color: var(--color-primary-300);
+}
+
+.reflection-label-action {
+  color: var(--color-accent-400);
+}
+
+.reflection-label-result {
+  color: var(--color-success-400);
+}
+
+.reflection-section p {
+  font-size: 0.82rem;
+  color: var(--color-text-secondary);
+  line-height: 1.5;
+}
+
+.reflection-empty {
+  padding: var(--space-xl);
+  text-align: center;
+  color: var(--color-text-muted);
+  font-size: 0.85rem;
+}
+
+.reflection-prompt-box {
+  background: rgba(80, 70, 229, 0.05);
+  border: 1px solid rgba(80, 70, 229, 0.2);
+  border-radius: var(--radius-md);
+  padding: var(--space-md);
+  font-size: 0.8rem;
+  color: var(--color-text-secondary);
+  line-height: 1.5;
+  margin-top: var(--space-md);
+}
+
+.reflection-prompt-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: var(--color-primary-400);
+  margin-bottom: var(--space-xs);
+}

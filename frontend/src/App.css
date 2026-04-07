@@ -1,0 +1,163 @@
+/* ============================================
+   App Layout
+   ============================================ */
+
+.app {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* --- View Tabs --- */
+.view-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 0 var(--space-lg);
+  max-width: 1600px;
+  margin: 0 auto;
+  width: 100%;
+  margin-top: var(--space-sm);
+}
+
+.view-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: 12px 28px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  background: transparent;
+  border: 1px solid transparent;
+  border-bottom: none;
+  border-radius: var(--radius-md) var(--radius-md) 0 0;
+  transition: all var(--transition-base);
+  position: relative;
+}
+
+.view-tab:hover {
+  color: var(--color-text-secondary);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.view-tab.active {
+  color: var(--color-text-primary);
+  background: var(--glass-bg);
+  border-color: var(--glass-border);
+  box-shadow: 0 -2px 12px rgba(80, 70, 229, 0.15);
+}
+
+.view-tab.active::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, #5046e5, #22d3ee);
+}
+
+.view-tab-icon {
+  font-size: 1.1rem;
+}
+
+.view-tab-badge {
+  font-size: 0.55rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  padding: 2px 6px;
+  border-radius: 9999px;
+  background: linear-gradient(135deg, #06b6d4, #a78bfa);
+  color: white;
+  animation: pulse-glow 2s infinite;
+}
+
+.app-main {
+  flex: 1;
+  padding: var(--space-lg);
+  max-width: 1600px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+/* Two-column layout */
+.app-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-lg);
+  margin-top: var(--space-lg);
+}
+
+/* Left column: Code + Tests */
+.app-col-left {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+}
+
+/* Right column: Reflection + Rewards + History */
+.app-col-right {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+}
+
+/* Top bar: Task selector + Action panel */
+.app-top-bar {
+  display: flex;
+  gap: var(--space-lg);
+  align-items: stretch;
+}
+
+.app-top-bar > *:first-child {
+  flex: 1;
+}
+
+.app-top-bar > *:last-child {
+  flex: 2;
+}
+
+/* Reward charts row */
+.reward-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-lg);
+}
+
+/* Loading state */
+.app-loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 60vh;
+  font-size: 1.2rem;
+  color: var(--color-text-secondary);
+}
+
+.app-loading-spinner {
+  width: 48px;
+  height: 48px;
+  border: 3px solid var(--color-border);
+  border-top-color: var(--color-primary-500);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin-right: var(--space-md);
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Responsive */
+@media (max-width: 1200px) {
+  .app-grid {
+    grid-template-columns: 1fr;
+  }
+  .app-top-bar {
+    flex-direction: column;
+  }
+  .reward-row {
+    grid-template-columns: 1fr;
+  }
+}

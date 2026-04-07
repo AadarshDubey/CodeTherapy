@@ -1,0 +1,158 @@
+/* ========================================
+   ComparisonChart — A/B Experiment Results
+   ======================================== */
+
+.comparison-chart {
+  padding: var(--space-lg);
+  animation: fadeIn 0.6s ease-out forwards;
+}
+
+.comparison-chart-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin-bottom: var(--space-lg);
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.comparison-bars {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xl);
+}
+
+.comparison-metric {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.comparison-metric-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.comparison-bar-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.comparison-bar-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+.comparison-bar-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  width: 80px;
+  flex-shrink: 0;
+  text-align: right;
+}
+
+.comparison-bar-label.blind {
+  color: #f87171;
+}
+
+.comparison-bar-label.reflection {
+  color: #22d3ee;
+}
+
+.comparison-bar-track {
+  flex: 1;
+  height: 28px;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  position: relative;
+}
+
+.comparison-bar-fill {
+  height: 100%;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding-right: 10px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: white;
+  transition: width 1.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+  min-width: 40px;
+}
+
+.comparison-bar-fill.blind {
+  background: linear-gradient(90deg, #7f1d1d, #ef4444);
+}
+
+.comparison-bar-fill.reflection {
+  background: linear-gradient(90deg, #0e4d5c, #06b6d4);
+}
+
+.comparison-bar-fill.reflection.winner {
+  background: linear-gradient(90deg, #064e3b, #10b981);
+  box-shadow: 0 0 12px rgba(16, 185, 129, 0.4);
+}
+
+/* Winner badge */
+.comparison-winner {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  background: rgba(16, 185, 129, 0.15);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  margin-left: 8px;
+}
+
+/* Summary stats */
+.comparison-summary {
+  margin-top: var(--space-xl);
+  padding-top: var(--space-lg);
+  border-top: 1px solid var(--color-border);
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-md);
+}
+
+.comparison-stat {
+  text-align: center;
+  padding: var(--space-md);
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+}
+
+.comparison-stat-value {
+  font-size: 1.8rem;
+  font-weight: 800;
+  line-height: 1;
+  margin-bottom: 4px;
+}
+
+.comparison-stat-value.positive {
+  color: #22d3ee;
+}
+
+.comparison-stat-value.negative {
+  color: #f87171;
+}
+
+.comparison-stat-label {
+  font-size: 0.7rem;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}

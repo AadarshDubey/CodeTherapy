@@ -1,0 +1,21 @@
+.learning-curve-panel {
+  padding: var(--space-lg);
+  animation: fadeIn var(--transition-slow) ease-out;
+  display: flex;
+  flex-direction: column;
+}
+
+.learning-curve-title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-md);
+}
+
+.learning-curve-container {
+  height: 250px;
+  width: 100%;
+}

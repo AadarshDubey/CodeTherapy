@@ -1,0 +1,19 @@
+api_json_fix Passed: 0 Total: 3
+Tests: 0/3 passed
+  ERROR test_valid_json: 'dict' object has no attribute 'username'
+  ERROR test_invalid_json: Expecting property name enclosed in double quotes: line 1 column 2 (char 1)
+  ERROR test_missing_username: 'dict' object has no attribute 'username'
+
+csv_processor_fix Passed: 1 Total: 3
+Tests: 1/3 passed
+  PASS test_clean_data
+  ERROR test_missing_amount: could not convert string to float: ''
+  ERROR test_empty_rows: list index out of range
+
+retry_decorator_fix Passed: 2 Total: 4
+Tests: 2/4 passed
+  PASS test_no_failure
+  PASS test_fail_then_succeed
+  FAIL test_always_fail_raises: Expected KeyError, got different exception: <class 'AssertionError'>
+  FAIL test_exact_retry_count: Expected 3 attempts (1 initial + 2 retries), got 2
+

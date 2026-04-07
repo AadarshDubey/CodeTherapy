@@ -1,0 +1,104 @@
+/* TestResults.css */
+.test-results {
+  padding: var(--space-lg);
+  animation: fadeIn var(--transition-slow) ease-out;
+}
+
+.test-results-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-md);
+}
+
+.test-results-title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.test-results-count {
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 9999px;
+}
+
+.test-results-count.all-pass {
+  background: rgba(34, 197, 94, 0.15);
+  color: var(--color-success-400);
+  border: 1px solid rgba(34, 197, 94, 0.3);
+}
+
+.test-results-count.some-fail {
+  background: rgba(244, 63, 94, 0.15);
+  color: var(--color-error-400);
+  border: 1px solid rgba(244, 63, 94, 0.3);
+}
+
+.test-results-progress {
+  width: 100%;
+  height: 6px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 3px;
+  margin-bottom: var(--space-md);
+  overflow: hidden;
+}
+
+.test-results-progress-bar {
+  height: 100%;
+  border-radius: 3px;
+  transition: width var(--transition-slow), background var(--transition-slow);
+}
+
+.test-results-progress-bar.full {
+  background: linear-gradient(90deg, var(--color-success-400), var(--color-accent-400));
+}
+
+.test-results-progress-bar.partial {
+  background: linear-gradient(90deg, var(--color-warning-400), var(--color-warning-500));
+}
+
+.test-results-progress-bar.none {
+  background: var(--color-error-500);
+}
+
+.test-results-output {
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-md);
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  line-height: 1.7;
+  max-height: 250px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.test-line-pass {
+  color: var(--color-success-400);
+}
+
+.test-line-fail {
+  color: var(--color-error-400);
+}
+
+.test-line-error {
+  color: var(--color-warning-400);
+}
+
+.test-line-info {
+  color: var(--color-text-secondary);
+}
+
+.test-results-empty {
+  padding: var(--space-xl);
+  text-align: center;
+  color: var(--color-text-muted);
+  font-size: 0.85rem;
+}

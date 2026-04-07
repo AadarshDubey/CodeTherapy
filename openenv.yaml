@@ -1,0 +1,10 @@
+name: reflection_debug_agent
+version: "0.1.0"
+description: "Reflection-guided code debugging environment. An RL agent iteratively debugs code and writes structured Hypothesis → Action → Result reflections. Reward scores both code correctness and reflection quality."
+action: DebugAction
+observation: DebugObservation
+spec_version: 1
+type: environment
+runtime: docker
+app: backend.main:app
+port: 7860
