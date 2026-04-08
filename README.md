@@ -8,7 +8,7 @@
 
 ---
 
-## 🎯 What Makes This Environment Unique
+## 🎯🎯 What Makes This Environment Unique
 
 Most debugging environments reward **only** code correctness. This environment adds a novel dimension: **LLM-as-a-Judge reflection quality scoring**.
 
