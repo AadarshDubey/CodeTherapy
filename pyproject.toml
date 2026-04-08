@@ -14,8 +14,12 @@ dependencies = [
     "pydantic",
     "python-dotenv",
     "openai",
-    "httpx"
+    "httpx",
+    "openenv-core>=0.2.0"
 ]
+
+[project.scripts]
+openenv-server = "server.app:main"
 
 [tool.setuptools.packages.find]
 where = ["."]
