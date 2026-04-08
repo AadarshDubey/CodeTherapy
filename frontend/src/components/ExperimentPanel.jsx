@@ -1,15 +1,17 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import useEnvironmentStore from '../store/useEnvironmentStore';
 import ComparisonChart from './ComparisonChart';
 import './ExperimentPanel.css';
 
-const PHASE_LABELS = [
-  '', // 0 = idle
-  '⏳ Running...', // 1 = running
-  '🔴 Blind Agent', // 2 = show blind results
-  '🔀 Activate Reflection', // 3 = toggle
-  '🟢 Reflection Agent', // 4 = show reflection results
-  '📊 Final Results', // 5 = comparison chart
+const THINKING_MESSAGES = [
+  'Analyzing code structure...',
+  'Identifying potential bugs...',
+  'Formulating hypothesis...',
+  'Evaluating fix strategies...',
+  'Reviewing test failures...',
+  'Reasoning about root cause...',
+  'Constructing targeted edit...',
+  'Validating approach...',
 ];
 
 function getStepClass(step, allSteps) {
@@ -81,6 +83,195 @@ function StepTimeline({ steps, mode }) {
   );
 }
 
+
+/** Live thinking indicator with rotating messages */
+function ThinkingIndicator({ step, maxSteps }) {
+  const [msgIndex, setMsgIndex] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setMsgIndex((prev) => (prev + 1) % THINKING_MESSAGES.length);
+    }, 2200);
+    return () => clearInterval(interval);
+  }, []);
+
+  return (
+    <div className="thinking-indicator">
+      <div className="thinking-brain-container">
+        <div className="thinking-brain">🧠</div>
+        <div className="thinking-rings">
+          <div className="thinking-ring ring-1" />
+          <div className="thinking-ring ring-2" />
+          <div className="thinking-ring ring-3" />
+        </div>
+      </div>
+      <div className="thinking-text-area">
+        <div className="thinking-status">
+          Thinking about Step {step}/{maxSteps}...
+        </div>
+        <div className="thinking-message" key={msgIndex}>
+          {THINKING_MESSAGES[msgIndex]}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
+/** Live step card that appears when a step completes */
+function LiveStepCard({ step, mode, isLatest }) {
+  const sub = step.reflection_sub_scores || {};
+
+  return (
+    <div className={`live-step-card ${getStepClass(step, [step])} ${isLatest ? 'latest' : ''}`}>
+      <div className="live-step-header">
+        <span className="live-step-num">Step {step.step}</span>
+        <span className={`live-step-tests ${getTestBadgeClass(step)}`}>
+          🧪 {step.tests_passed}/{step.tests_total}
+        </span>
+        {step.reward !== undefined && (
+          <span className={`live-step-reward ${step.reward > 0 ? 'positive' : 'negative'}`}>
+            {step.reward > 0 ? '↑' : '↓'} {step.reward.toFixed(3)}
+          </span>
+        )}
+      </div>
+      <div className={`live-step-hypothesis ${isLatest ? 'typing' : ''}`}>
+        💡 {step.hypothesis || 'No hypothesis'}
+      </div>
+      {mode === 'reflection' && sub.s_bug !== undefined && (
+        <div className="live-step-scores">
+          <span className={`timeline-score-pill ${getScoreClass(sub.s_bug)}`}>
+            Bug ID: {sub.s_bug.toFixed(2)}
+          </span>
+          <span className={`timeline-score-pill ${getScoreClass(sub.s_fix)}`}>
+            Fix: {sub.s_fix.toFixed(2)}
+          </span>
+          <span className={`timeline-score-pill ${getScoreClass(sub.s_res)}`}>
+            Reasoning: {sub.s_res.toFixed(2)}
+          </span>
+        </div>
+      )}
+      {step.done && step.tests_passed === step.tests_total && (
+        <div className="live-step-success-badge">✅ All tests passing!</div>
+      )}
+    </div>
+  );
+}
+
+
+/** The main Agent Thinking Panel — replaces the loading spinner */
+function AgentThinkingPanel() {
+  const liveMode = useEnvironmentStore((s) => s.experimentLiveMode);
+  const liveStep = useEnvironmentStore((s) => s.experimentLiveStep);
+  const liveMaxSteps = useEnvironmentStore((s) => s.experimentLiveMaxSteps);
+  const liveSteps = useEnvironmentStore((s) => s.experimentLiveSteps);
+  const isThinking = useEnvironmentStore((s) => s.experimentIsThinking);
+  const blindSteps = useEnvironmentStore((s) => s.experimentBlindSteps);
+  const blindResult = useEnvironmentStore((s) => s.experimentBlindResult);
+
+  const feedRef = useRef(null);
+
+  // Auto-scroll to bottom when new steps appear
+  useEffect(() => {
+    if (feedRef.current) {
+      feedRef.current.scrollTop = feedRef.current.scrollHeight;
+    }
+  }, [liveSteps, isThinking]);
+
+  const isBlind = liveMode === 'blind';
+  const isReflection = liveMode === 'reflection';
+  const completedSteps = liveSteps.length;
+  const progressPercent = liveMaxSteps > 0
+    ? Math.round((completedSteps / liveMaxSteps) * 100)
+    : 0;
+
+  // If no mode yet, show initial loading
+  if (!liveMode) {
+    return (
+      <div className="agent-thinking-panel">
+        <div className="thinking-init">
+          <div className="thinking-init-spinner" />
+          <div className="thinking-init-text">Initializing experiment...</div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="agent-thinking-panel">
+      {/* Mode header */}
+      <div className={`thinking-header ${isBlind ? 'blind' : 'reflection'}`}>
+        <div className="thinking-mode-indicator">
+          <div className={`thinking-dot ${isBlind ? 'blind' : 'reflection'}`} />
+          <span className="thinking-mode-label">
+            {isBlind ? '🔴 Blind Agent' : '🟢 Reflection Agent'}
+          </span>
+          <span className="thinking-mode-desc">
+            {isBlind
+              ? '(No Reflection Scoring)'
+              : '(LLM-as-a-Judge Scoring)'}
+          </span>
+        </div>
+        <div className="thinking-step-counter">
+          Step {completedSteps + (isThinking ? 1 : 0)}/{liveMaxSteps}
+        </div>
+      </div>
+
+      {/* Progress bar */}
+      <div className="thinking-progress-bar">
+        <div
+          className={`thinking-progress-fill ${isBlind ? 'blind' : 'reflection'}`}
+          style={{ width: `${progressPercent}%` }}
+        />
+        {isThinking && (
+          <div
+            className="thinking-progress-pulse"
+            style={{ left: `${progressPercent}%` }}
+          />
+        )}
+      </div>
+
+      {/* Blind result summary (shown when running reflection agent) */}
+      {isReflection && blindResult && (
+        <div className="thinking-blind-summary">
+          <div className="blind-summary-badge">
+            {blindResult.success ? '✅' : '❌'} Blind Agent finished
+            — {blindResult.final_tests_passed}/{blindResult.final_tests_total} tests
+            in {blindResult.steps_taken} steps
+          </div>
+        </div>
+      )}
+
+      {/* Step feed */}
+      <div className="thinking-feed" ref={feedRef}>
+        {liveSteps.map((step, i) => (
+          <LiveStepCard
+            key={`${liveMode}-${step.step}`}
+            step={step}
+            mode={liveMode}
+            isLatest={i === liveSteps.length - 1 && !isThinking}
+          />
+        ))}
+
+        {/* Thinking indicator (shown while waiting for LLM) */}
+        {isThinking && (
+          <ThinkingIndicator step={liveStep} maxSteps={liveMaxSteps} />
+        )}
+      </div>
+
+      {/* Bottom info */}
+      <div className="thinking-footer">
+        {isBlind ? (
+          <span>After blind mode completes, the reflection agent will run next.</span>
+        ) : (
+          <span>Reflection scores guide each hypothesis toward the root cause.</span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+
 export default function ExperimentPanel() {
   const experimentData = useEnvironmentStore((s) => s.experimentData);
   const isExperimentRunning = useEnvironmentStore((s) => s.isExperimentRunning);
@@ -134,19 +325,9 @@ export default function ExperimentPanel() {
       );
     }
 
-    // Phase 1: Loading
+    // Phase 1: Live Agent Thinking (replaces old spinner)
     if (isExperimentRunning || experimentPhase === 1) {
-      return (
-        <div className="experiment-loading">
-          <div className="experiment-spinner" />
-          <div className="experiment-loading-text">
-            Running A/B Experiment on <strong>{localTask}</strong>...
-          </div>
-          <div className="experiment-loading-subtext">
-            Running blind mode, then reflection mode. This takes 60–90 seconds.
-          </div>
-        </div>
-      );
+      return <AgentThinkingPanel />;
     }
 
     // Error

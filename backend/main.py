@@ -30,7 +30,8 @@ from backend.models.observation import DebugObservation
 from backend.models.state import DebugState
 from backend.tasks import TASK_REGISTRY, TASK_LIST
 from backend.agent import get_agent_action
-from backend.engine.experiment import run_experiment
+from backend.engine.experiment import run_experiment, run_experiment_stream
+from sse_starlette.sse import EventSourceResponse
 
 
 # --- App Setup ---
@@ -261,6 +262,46 @@ async def api_run_experiment(request: ExperimentRequest):
         raise HTTPException(status_code=500, detail=f"Experiment failed: {str(exc)}")
 
 
+@app.get("/api/experiment/stream")
+async def api_stream_experiment(task_name: str = "api_json_fix"):
+    """
+    SSE endpoint that streams experiment progress step-by-step.
+    Events: phase_start, thinking, step, phase_end, complete.
+    """
+    import asyncio
+
+    async def event_generator():
+        queue = asyncio.Queue()
+        loop = asyncio.get_event_loop()
+
+        def _run_sync():
+            """Run the sync generator in a thread and push events to the queue."""
+            try:
+                for event in run_experiment_stream(task_name):
+                    loop.call_soon_threadsafe(queue.put_nowait, event)
+                loop.call_soon_threadsafe(queue.put_nowait, None)  # sentinel
+            except Exception as exc:
+                loop.call_soon_threadsafe(
+                    queue.put_nowait,
+                    {"type": "error", "message": str(exc)},
+                )
+                loop.call_soon_threadsafe(queue.put_nowait, None)
+
+        # Start the blocking generator in a background thread
+        asyncio.ensure_future(asyncio.to_thread(_run_sync))
+
+        while True:
+            event = await queue.get()
+            if event is None:
+                break
+            yield {
+                "event": event.get("type", "message"),
+                "data": json.dumps(event),
+            }
+
+    return EventSourceResponse(event_generator())
+
+
 @app.get("/api/task/{task_name}")
 async def get_task_detail(task_name: str):
     """Get detailed info about a specific task."""
@@ -284,19 +325,17 @@ async def health():
 
 # --- Static File Serving (production) ---
 # Serve built frontend from /frontend/dist if it exists
+# NOTE: In dev mode, Vite serves the frontend directly on port 5173.
+# This only applies when the built dist folder exists (production deployment).
 frontend_dist = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "frontend", "dist"
 )
 if os.path.isdir(frontend_dist):
-    app.mount("/assets", StaticFiles(directory=os.path.join(frontend_dist, "assets")), name="assets")
+    # Serve static assets (JS, CSS, images) from /assets
+    assets_dir = os.path.join(frontend_dist, "assets")
+    if os.path.isdir(assets_dir):
+        app.mount("/assets", StaticFiles(directory=assets_dir), name="assets")
 
     @app.get("/")
     async def serve_frontend():
-        return FileResponse(os.path.join(frontend_dist, "index.html"))
-
-    @app.get("/{full_path:path}")
-    async def serve_frontend_fallback(full_path: str):
-        file_path = os.path.join(frontend_dist, full_path)
-        if os.path.isfile(file_path):
-            return FileResponse(file_path)
         return FileResponse(os.path.join(frontend_dist, "index.html"))

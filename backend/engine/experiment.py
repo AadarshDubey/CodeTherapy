@@ -130,32 +130,9 @@ def _run_single_episode(
     }
 
 
-def run_experiment(task_name: str) -> Dict[str, Any]:
-    """
-    Run a full A/B experiment: blind mode vs reflection mode.
-
-    Args:
-        task_name: Name of the task to run both episodes on.
-
-    Returns:
-        Dictionary with both episode results and comparison metrics.
-    """
-    experiment_id = str(uuid.uuid4())[:8]
-
-    # Run blind mode first (no reflection scoring)
-    blind_result = _run_single_episode(
-        task_name=task_name,
-        use_reflection=False,
-    )
-
-    # Run reflection mode (full system)
-    reflection_result = _run_single_episode(
-        task_name=task_name,
-        use_reflection=True,
-    )
-
-    # Compute comparison metrics
-    comparison = {
+def _build_comparison(blind_result: Dict[str, Any], reflection_result: Dict[str, Any]) -> Dict[str, Any]:
+    """Build comparison metrics between blind and reflection results."""
+    return {
         "success_rate": {
             "blind": 1.0 if blind_result["success"] else 0.0,
             "reflection": 1.0 if reflection_result["success"] else 0.0,
@@ -179,6 +156,31 @@ def run_experiment(task_name: str) -> Dict[str, Any]:
         "tests_total": blind_result["final_tests_total"],
     }
 
+
+def run_experiment(task_name: str) -> Dict[str, Any]:
+    """
+    Run a full A/B experiment: blind mode vs reflection mode.
+
+    Args:
+        task_name: Name of the task to run both episodes on.
+
+    Returns:
+        Dictionary with both episode results and comparison metrics.
+    """
+    experiment_id = str(uuid.uuid4())[:8]
+
+    blind_result = _run_single_episode(
+        task_name=task_name,
+        use_reflection=False,
+    )
+
+    reflection_result = _run_single_episode(
+        task_name=task_name,
+        use_reflection=True,
+    )
+
+    comparison = _build_comparison(blind_result, reflection_result)
+
     return {
         "experiment_id": experiment_id,
         "task_name": task_name,
@@ -186,3 +188,179 @@ def run_experiment(task_name: str) -> Dict[str, Any]:
         "reflection": reflection_result,
         "comparison": comparison,
     }
+
+
+def _run_single_episode_stream(
+    task_name: str,
+    use_reflection: bool,
+    max_steps: int = 8,
+):
+    """
+    Generator version of _run_single_episode.
+    Yields SSE-friendly dicts after each step.
+    """
+    mode = "reflection" if use_reflection else "blind"
+    env = DebugEnvironment(use_reflection=use_reflection)
+    obs = env.reset(task_name=task_name)
+
+    buggy_code = obs.buggy_code
+    test_output = obs.test_output
+    initial_code = obs.buggy_code
+
+    steps_data: List[Dict[str, Any]] = []
+    history_strs: List[str] = []
+    total_reflection_quality = 0.0
+    total_code_correctness = 0.0
+
+    start_time = time.time()
+
+    for step in range(1, max_steps + 1):
+        if obs.done:
+            break
+
+        # Emit "thinking" event before LLM call
+        yield {
+            "type": "thinking",
+            "mode": mode,
+            "step": step,
+            "max_steps": max_steps,
+        }
+
+        # Get agent's action from the LLM
+        action_dict = get_agent_action(
+            buggy_code=buggy_code,
+            test_output=test_output,
+            step=step,
+            history=history_strs,
+        )
+
+        # Execute step
+        action = DebugAction(
+            edits=action_dict["edits"],
+            hypothesis=action_dict["hypothesis"],
+            action_description=action_dict["action_description"],
+            expected_result=action_dict["expected_result"],
+        )
+
+        obs = env.step(action)
+
+        # Extract metrics
+        reward = obs.reward or 0.0
+        breakdown = obs.reward_breakdown or {}
+        code_correctness = breakdown.get("code_correctness", 0.0)
+        reflection_quality = breakdown.get("reflection_quality", 0.5)
+        sub_scores = breakdown.get("reflection_sub_scores", {})
+
+        total_reflection_quality += reflection_quality
+        total_code_correctness += code_correctness
+
+        step_entry = {
+            "step": step,
+            "tests_passed": obs.tests_passed,
+            "tests_total": obs.tests_total,
+            "reward": round(reward, 4),
+            "code_correctness": round(code_correctness, 4),
+            "reflection_quality": round(reflection_quality, 4),
+            "hypothesis": action_dict["hypothesis"][:300],
+            "action_description": action_dict["action_description"][:300],
+            "expected_result": action_dict["expected_result"][:300],
+            "reflection_sub_scores": sub_scores,
+            "done": obs.done,
+            "error": obs.last_action_error,
+        }
+        steps_data.append(step_entry)
+
+        # Emit "step" event with full step data
+        yield {
+            "type": "step",
+            "mode": mode,
+            "data": step_entry,
+        }
+
+        # Update for next iteration
+        buggy_code = obs.buggy_code
+        test_output = obs.test_output
+        history_strs.append(
+            f"Step {step}: {action_dict['hypothesis'][:80]} -> reward {reward:+.2f}"
+        )
+
+        if obs.done:
+            break
+
+    elapsed = round(time.time() - start_time, 2)
+    steps_taken = len(steps_data)
+    all_pass = obs.tests_passed == obs.tests_total and obs.tests_total > 0
+
+    result = {
+        "mode": mode,
+        "task_name": task_name,
+        "success": all_pass,
+        "steps_taken": steps_taken,
+        "max_steps": max_steps,
+        "final_tests_passed": obs.tests_passed,
+        "final_tests_total": obs.tests_total,
+        "avg_reflection_quality": round(
+            total_reflection_quality / max(steps_taken, 1), 4
+        ),
+        "avg_code_correctness": round(
+            total_code_correctness / max(steps_taken, 1), 4
+        ),
+        "elapsed_seconds": elapsed,
+        "steps": steps_data,
+        "initial_code": initial_code,
+        "final_code": obs.buggy_code,
+    }
+
+    # Emit phase_end with summary
+    yield {
+        "type": "phase_end",
+        "mode": mode,
+        "result": result,
+    }
+
+    # Return result dict for the caller to aggregate
+    return result
+
+
+def run_experiment_stream(task_name: str):
+    """
+    Generator that yields SSE events for the full A/B experiment.
+
+    Events yielded:
+      - phase_start: {type, mode, task_name}
+      - thinking:    {type, mode, step, max_steps}
+      - step:        {type, mode, data: {step details}}
+      - phase_end:   {type, mode, result: {episode summary}}
+      - complete:    {type, experiment_id, task_name, blind, reflection, comparison}
+    """
+    experiment_id = str(uuid.uuid4())[:8]
+
+    # --- Blind episode ---
+    yield {"type": "phase_start", "mode": "blind", "task_name": task_name}
+
+    blind_result = None
+    for event in _run_single_episode_stream(task_name, use_reflection=False):
+        yield event
+        if event["type"] == "phase_end":
+            blind_result = event["result"]
+
+    # --- Reflection episode ---
+    yield {"type": "phase_start", "mode": "reflection", "task_name": task_name}
+
+    reflection_result = None
+    for event in _run_single_episode_stream(task_name, use_reflection=True):
+        yield event
+        if event["type"] == "phase_end":
+            reflection_result = event["result"]
+
+    # --- Final comparison ---
+    if blind_result and reflection_result:
+        comparison = _build_comparison(blind_result, reflection_result)
+        yield {
+            "type": "complete",
+            "experiment_id": experiment_id,
+            "task_name": task_name,
+            "blind": blind_result,
+            "reflection": reflection_result,
+            "comparison": comparison,
+        }

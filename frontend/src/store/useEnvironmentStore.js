@@ -31,6 +31,18 @@ const useEnvironmentStore = create((set, get) => ({
   experimentPhase: 0, // 0=idle, 1=running, 2=done(show blind), 3=toggle, 4=show reflection, 5=results
   activeView: 'agent', // 'agent' or 'experiment'
 
+  // Live streaming state (for agent thinking visualization)
+  experimentLiveMode: null,       // 'blind' | 'reflection' | null
+  experimentLiveStep: null,       // current step number being processed
+  experimentLiveMaxSteps: 8,      // max steps per episode
+  experimentLiveSteps: [],        // steps for the currently-running agent
+  experimentBlindSteps: [],       // accumulated blind episode steps
+  experimentReflectionSteps: [],  // accumulated reflection episode steps
+  experimentIsThinking: false,    // true while waiting for LLM response
+  experimentBlindResult: null,    // blind episode summary (set on phase_end)
+  experimentReflectionResult: null, // reflection episode summary
+  _experimentEventSource: null,   // internal: EventSource reference for cleanup
+
   // --- Actions ---
 
   /** Switch between agent and experiment views */
@@ -128,37 +140,133 @@ const useEnvironmentStore = create((set, get) => ({
     set({ isAutoRunning: false });
   },
 
-  /** Run A/B experiment */
-  runExperiment: async (taskName) => {
+  /** Run A/B experiment with live SSE streaming */
+  runExperiment: (taskName) => {
     const task = taskName || get().selectedTask;
+
+    // Clean up any previous stream
+    const prev = get()._experimentEventSource;
+    if (prev) prev.close();
+
     set({
       isExperimentRunning: true,
       experimentError: null,
       experimentData: null,
       experimentPhase: 1,
+      experimentLiveMode: null,
+      experimentLiveStep: null,
+      experimentLiveSteps: [],
+      experimentBlindSteps: [],
+      experimentReflectionSteps: [],
+      experimentIsThinking: false,
+      experimentBlindResult: null,
+      experimentReflectionResult: null,
     });
-    try {
-      const data = await api.runExperiment(task);
-      set({
-        experimentData: data,
-        isExperimentRunning: false,
-        experimentPhase: 2,
-      });
-    } catch (err) {
-      set({
-        isExperimentRunning: false,
-        experimentError: err.message,
-        experimentPhase: 0,
-      });
-    }
+
+    const source = api.streamExperiment(
+      task,
+      // onEvent callback — handle each SSE event
+      (event) => {
+        switch (event.type) {
+          case 'phase_start':
+            set({
+              experimentLiveMode: event.mode,
+              experimentLiveSteps: [],
+              experimentIsThinking: false,
+              experimentLiveStep: null,
+            });
+            break;
+
+          case 'thinking':
+            set({
+              experimentIsThinking: true,
+              experimentLiveStep: event.step,
+              experimentLiveMaxSteps: event.max_steps || 8,
+            });
+            break;
+
+          case 'step': {
+            const mode = event.mode;
+            const stepData = event.data;
+            const liveSteps = [...get().experimentLiveSteps, stepData];
+            const updates = {
+              experimentIsThinking: false,
+              experimentLiveSteps: liveSteps,
+            };
+            if (mode === 'blind') {
+              updates.experimentBlindSteps = [...get().experimentBlindSteps, stepData];
+            } else {
+              updates.experimentReflectionSteps = [...get().experimentReflectionSteps, stepData];
+            }
+            set(updates);
+            break;
+          }
+
+          case 'phase_end':
+            if (event.mode === 'blind') {
+              set({ experimentBlindResult: event.result });
+            } else {
+              set({ experimentReflectionResult: event.result });
+            }
+            break;
+
+          case 'complete':
+            set({
+              experimentData: event,
+              isExperimentRunning: false,
+              experimentPhase: 2,
+              experimentLiveMode: null,
+              experimentIsThinking: false,
+              _experimentEventSource: null,
+            });
+            break;
+
+          case 'error':
+            set({
+              isExperimentRunning: false,
+              experimentError: event.message || 'Experiment stream failed',
+              experimentPhase: 0,
+              _experimentEventSource: null,
+            });
+            break;
+
+          default:
+            break;
+        }
+      },
+      // onError callback
+      (err) => {
+        set({
+          isExperimentRunning: false,
+          experimentError: 'Connection to experiment stream lost',
+          experimentPhase: 0,
+          _experimentEventSource: null,
+        });
+      }
+    );
+
+    set({ _experimentEventSource: source });
   },
 
   /** Clear experiment data */
-  clearExperiment: () => set({
-    experimentData: null,
-    experimentError: null,
-    experimentPhase: 0,
-  }),
+  clearExperiment: () => {
+    const prev = get()._experimentEventSource;
+    if (prev) prev.close();
+    set({
+      experimentData: null,
+      experimentError: null,
+      experimentPhase: 0,
+      experimentLiveMode: null,
+      experimentLiveStep: null,
+      experimentLiveSteps: [],
+      experimentBlindSteps: [],
+      experimentReflectionSteps: [],
+      experimentIsThinking: false,
+      experimentBlindResult: null,
+      experimentReflectionResult: null,
+      _experimentEventSource: null,
+    });
+  },
 
   /** Fetch current state */
   fetchState: async () => {
