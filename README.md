@@ -10,7 +10,7 @@ license: mit
 short_description: "Process-supervised debugging with LLM-as-a-Judge reflections"
 ---
 
-# 🔬 Reflection-Guided Debugging Agent
+# 🔬 Reflection-Guided Debugging Agent(Code Therapy)
 
 > We introduce process-supervised debugging environments that reward how models think, not just what they output. The agent must fix bugs AND write structured reflections — both contribute to the reward.
 
