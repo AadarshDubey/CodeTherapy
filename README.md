@@ -1,3 +1,15 @@
+---
+title: Reflection Debug Agent
+emoji: 🔬
+colorFrom: indigo
+colorTo: purple
+sdk: docker
+app_port: 7860
+pinned: false
+license: mit
+short_description: "Process-supervised debugging with LLM-as-a-Judge reflections"
+---
+
 # 🔬 Reflection-Guided Debugging Agent
 
 > We introduce process-supervised debugging environments that reward how models think, not just what they output. The agent must fix bugs AND write structured reflections — both contribute to the reward.

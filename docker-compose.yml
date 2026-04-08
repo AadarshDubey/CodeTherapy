@@ -1,14 +1,14 @@
-version: "3.8"
-
 services:
   reflection-debug-agent:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
     ports:
       - "7860:7860"
+    env_file:
+      - .env
     environment:
       - API_BASE_URL=${API_BASE_URL:-https://router.huggingface.co/v1}
       - MODEL_NAME=${MODEL_NAME:-Qwen/Qwen2.5-72B-Instruct}
       - HF_TOKEN=${HF_TOKEN:-}
-    volumes:
-      - ./backend:/app/backend
     restart: unless-stopped
