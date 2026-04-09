@@ -24,9 +24,9 @@ from openai import OpenAI
 from backend.engine.environment import DebugEnvironment
 from backend.models.action import DebugAction
 
-API_KEY = os.getenv("HF_TOKEN") or os.getenv("API_KEY")
-API_BASE_URL = os.getenv("API_BASE_URL") or "https://router.huggingface.co/v1"
-MODEL_NAME = os.getenv("MODEL_NAME") or "Qwen/Qwen2.5-72B-Instruct"
+API_KEY = os.environ.get("API_KEY", os.environ.get("HF_TOKEN"))
+API_BASE_URL = os.environ.get("API_BASE_URL", "https://router.huggingface.co/v1")
+MODEL_NAME = os.environ.get("MODEL_NAME", "Qwen/Qwen2.5-72B-Instruct")
 
 TASKS = ["api_json_fix", "csv_processor_fix", "retry_decorator_fix"]
 MAX_STEPS = 5
