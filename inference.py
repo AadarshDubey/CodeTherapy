@@ -53,9 +53,9 @@ import httpx
 
 # --- Configuration ---
 IMAGE_NAME = os.getenv("IMAGE_NAME")
-API_KEY = os.environ.get("API_KEY") or os.environ.get("HF_TOKEN")
-API_BASE_URL = os.environ.get("API_BASE_URL") or "https://router.huggingface.co/v1"
-MODEL_NAME = os.environ.get("MODEL_NAME") or "Qwen/Qwen2.5-72B-Instruct"
+API_KEY = os.getenv("HF_TOKEN") or os.getenv("API_KEY")
+API_BASE_URL = os.getenv("API_BASE_URL") or "https://router.huggingface.co/v1"
+MODEL_NAME = os.getenv("MODEL_NAME") or "Qwen/Qwen2.5-72B-Instruct"
 BENCHMARK = "reflection_debug_agent"
 MAX_STEPS = 8
 TEMPERATURE = 0.7
@@ -287,7 +287,10 @@ def run_task(client: OpenAI, env: DebugEnvClient, task_name: str) -> tuple:
 
 def main() -> None:
     """Run inference across all tasks."""
-    client = OpenAI(base_url=API_BASE_URL, api_key=API_KEY)
+    client = OpenAI(
+        base_url=os.environ["API_BASE_URL"],
+        api_key=os.environ["API_KEY"]
+    )
 
     # Connect to environment
     env_url = os.getenv("ENV_URL", "http://localhost:7860")
