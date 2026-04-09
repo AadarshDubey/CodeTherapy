@@ -40,16 +40,6 @@ import os
 import textwrap
 from typing import List, Optional
 
-# Load .env file automatically
-from dotenv import load_dotenv
-load_dotenv()
-
-# Provide fallback for local testing without breaking exact evaluation AST matching
-if "API_KEY" not in os.environ and "HF_TOKEN" in os.environ:
-    os.environ["API_KEY"] = os.environ["HF_TOKEN"]
-if "API_BASE_URL" not in os.environ:
-    os.environ["API_BASE_URL"] = "https://router.huggingface.co/v1"
-
 from openai import OpenAI
 
 # --- Environment Client Import ---
@@ -59,7 +49,14 @@ import httpx
 
 # --- Configuration ---
 IMAGE_NAME = os.getenv("IMAGE_NAME")
-MODEL_NAME = os.environ.get("MODEL_NAME", "Qwen/Qwen2.5-72B-Instruct")
+API_KEY = os.getenv("API_KEY") or os.getenv("HF_TOKEN")
+API_BASE_URL = os.getenv("API_BASE_URL", "https://router.huggingface.co/v1")
+MODEL_NAME = os.getenv("MODEL_NAME", "Qwen/Qwen2.5-72B-Instruct")
+
+# Debug: log which API endpoint is being used
+print(f"[DEBUG] API_BASE_URL={API_BASE_URL}", flush=True)
+print(f"[DEBUG] API_KEY set={bool(API_KEY)}", flush=True)
+print(f"[DEBUG] MODEL_NAME={MODEL_NAME}", flush=True)
 BENCHMARK = "reflection_debug_agent"
 MAX_STEPS = 8
 TEMPERATURE = 0.7
@@ -291,7 +288,7 @@ def run_task(client: OpenAI, env: DebugEnvClient, task_name: str) -> tuple:
 
 def main() -> None:
     """Run inference across all tasks."""
-    client = OpenAI(base_url=os.environ["API_BASE_URL"], api_key=os.environ["API_KEY"])
+    client = OpenAI(base_url=API_BASE_URL, api_key=API_KEY)
 
     # Connect to environment
     env_url = os.getenv("ENV_URL", "http://localhost:7860")
