@@ -57,7 +57,7 @@ def build_user_prompt(buggy_code: str, test_output: str, step: int, history: Lis
 
 def get_agent_action(buggy_code: str, test_output: str, step: int, history: List[str]) -> Dict[str, str]:
     """Call the LLM and parse its JSON response for the next action."""
-    client = OpenAI(base_url=os.environ["API_BASE_URL"], api_key=os.environ["API_KEY"])
+    client = OpenAI(base_url=API_BASE_URL, api_key=API_KEY)
     user_prompt = build_user_prompt(buggy_code, test_output, step, history)
     
     try:

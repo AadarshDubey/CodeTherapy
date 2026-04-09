@@ -287,10 +287,7 @@ def run_task(client: OpenAI, env: DebugEnvClient, task_name: str) -> tuple:
 
 def main() -> None:
     """Run inference across all tasks."""
-    client = OpenAI(
-        base_url=os.environ["API_BASE_URL"],
-        api_key=os.environ["API_KEY"]
-    )
+    client = OpenAI(base_url=API_BASE_URL, api_key=API_KEY)
 
     # Connect to environment
     env_url = os.getenv("ENV_URL", "http://localhost:7860")
