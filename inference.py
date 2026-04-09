@@ -42,6 +42,10 @@ from typing import List, Optional
 
 from openai import OpenAI
 
+# Load .env for local development only (does NOT override existing env vars)
+from dotenv import load_dotenv
+load_dotenv(override=False)
+
 # --- Environment Client Import ---
 # When running with from_docker_image(), the OpenEnv framework generates
 # a typed client. For direct HTTP mode, we use httpx.
@@ -249,6 +253,7 @@ def run_task(client: OpenAI, env: DebugEnvClient, task_name: str) -> tuple:
 
             obs = step_data["observation"]
             reward = step_data.get("reward", 0.0) or 0.0
+            reward = min(max(reward, 0.01), 0.99)
             done = step_data.get("done", False)
             error = obs.get("last_action_error")
 
@@ -270,15 +275,15 @@ def run_task(client: OpenAI, env: DebugEnvClient, task_name: str) -> tuple:
                 break
 
         # Compute final score
-        score = sum(rewards) / len(rewards) if rewards else 0.0
-        score = min(max(score, 0.0), 1.0)
+        score = sum(rewards) / len(rewards) if rewards else 0.01
+        score = min(max(score, 0.01), 0.99)
         success = score >= 0.5
 
         return success, steps_taken, score, rewards
 
     except Exception as exc:
         print(f"[DEBUG] Task {task_name} failed: {exc}", flush=True)
-        return False, steps_taken, 0.0, rewards
+        return False, steps_taken, 0.01, rewards
 
 
 def main() -> None:
