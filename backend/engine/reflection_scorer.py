@@ -21,8 +21,11 @@ from openai import OpenAI
 
 load_dotenv()
 
-API_KEY = os.environ.get("API_KEY", os.environ.get("HF_TOKEN"))
-API_BASE_URL = os.environ.get("API_BASE_URL", "https://router.huggingface.co/v1")
+if "API_KEY" not in os.environ and "HF_TOKEN" in os.environ:
+    os.environ["API_KEY"] = os.environ["HF_TOKEN"]
+if "API_BASE_URL" not in os.environ:
+    os.environ["API_BASE_URL"] = "https://router.huggingface.co/v1"
+
 MODEL_NAME = os.environ.get("MODEL_NAME", "Qwen/Qwen2.5-72B-Instruct")
 
 JUDGE_SYSTEM_PROMPT = textwrap.dedent("""\
@@ -48,7 +51,7 @@ class ReflectionScorer:
     """
     
     def __init__(self):
-        self.client = OpenAI(base_url=API_BASE_URL, api_key=API_KEY)
+        self.client = OpenAI(base_url=os.environ["API_BASE_URL"], api_key=os.environ["API_KEY"])
 
     def score(
         self,

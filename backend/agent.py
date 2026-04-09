@@ -6,10 +6,13 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+if "API_KEY" not in os.environ and "HF_TOKEN" in os.environ:
+    os.environ["API_KEY"] = os.environ["HF_TOKEN"]
+if "API_BASE_URL" not in os.environ:
+    os.environ["API_BASE_URL"] = "https://router.huggingface.co/v1"
+
 from openai import OpenAI
 
-API_KEY = os.environ.get("API_KEY", os.environ.get("HF_TOKEN"))
-API_BASE_URL = os.environ.get("API_BASE_URL", "https://router.huggingface.co/v1")
 MODEL_NAME = os.environ.get("MODEL_NAME", "Qwen/Qwen2.5-72B-Instruct")
 TEMPERATURE = 0.7
 MAX_TOKENS = 2048
@@ -57,7 +60,7 @@ def build_user_prompt(buggy_code: str, test_output: str, step: int, history: Lis
 
 def get_agent_action(buggy_code: str, test_output: str, step: int, history: List[str]) -> Dict[str, str]:
     """Call the LLM and parse its JSON response for the next action."""
-    client = OpenAI(base_url=API_BASE_URL, api_key=API_KEY)
+    client = OpenAI(base_url=os.environ["API_BASE_URL"], api_key=os.environ["API_KEY"])
     user_prompt = build_user_prompt(buggy_code, test_output, step, history)
     
     try:

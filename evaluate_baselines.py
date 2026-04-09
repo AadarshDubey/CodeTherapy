@@ -24,8 +24,11 @@ from openai import OpenAI
 from backend.engine.environment import DebugEnvironment
 from backend.models.action import DebugAction
 
-API_KEY = os.environ.get("API_KEY", os.environ.get("HF_TOKEN"))
-API_BASE_URL = os.environ.get("API_BASE_URL", "https://router.huggingface.co/v1")
+if "API_KEY" not in os.environ and "HF_TOKEN" in os.environ:
+    os.environ["API_KEY"] = os.environ["HF_TOKEN"]
+if "API_BASE_URL" not in os.environ:
+    os.environ["API_BASE_URL"] = "https://router.huggingface.co/v1"
+
 MODEL_NAME = os.environ.get("MODEL_NAME", "Qwen/Qwen2.5-72B-Instruct")
 
 TASKS = ["api_json_fix", "csv_processor_fix", "retry_decorator_fix"]
@@ -135,7 +138,7 @@ def run_eval(mode: str, task_name: str, client: OpenAI) -> tuple:
 
 def main():
     print(f"Using Model: {MODEL_NAME}")
-    client = OpenAI(base_url=API_BASE_URL, api_key=API_KEY)
+    client = OpenAI(base_url=os.environ["API_BASE_URL"], api_key=os.environ["API_KEY"])
     modes = ["no_reflection", "outcome_only", "proposed"]
     
     results = {m: {"success": 0, "steps": 0, "score": 0.0} for m in modes}
