@@ -199,12 +199,13 @@ class DebugEnvironment:
             }
         reflection_quality = reflection_result["combined"]
 
-        # 4. Compute combined reward
+        # 4. Compute combined reward (clamped to strictly between 0 and 1)
         combined_reward = round(
             self.REWARD_WEIGHT_CODE * code_correctness
             + self.REWARD_WEIGHT_REFLECTION * reflection_quality,
             4,
         )
+        combined_reward = min(max(combined_reward, 0.01), 0.99)
 
         reward_breakdown = RewardBreakdown(
             code_correctness=code_correctness,
@@ -283,7 +284,7 @@ class DebugEnvironment:
             step_number=self._state.step_count,
             max_steps=self.MAX_STEPS,
             done=True,
-            reward=0.0,
+            reward=0.01,
             last_action_error=error,
             reward_breakdown=None,
         )
