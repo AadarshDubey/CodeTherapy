@@ -52,11 +52,6 @@ IMAGE_NAME = os.getenv("IMAGE_NAME")
 API_KEY = os.getenv("API_KEY") or os.getenv("HF_TOKEN")
 API_BASE_URL = os.getenv("API_BASE_URL", "https://router.huggingface.co/v1")
 MODEL_NAME = os.getenv("MODEL_NAME", "Qwen/Qwen2.5-72B-Instruct")
-
-# Debug: log which API endpoint is being used
-print(f"[DEBUG] API_BASE_URL={API_BASE_URL}", flush=True)
-print(f"[DEBUG] API_KEY set={bool(API_KEY)}", flush=True)
-print(f"[DEBUG] MODEL_NAME={MODEL_NAME}", flush=True)
 BENCHMARK = "reflection_debug_agent"
 MAX_STEPS = 8
 TEMPERATURE = 0.7
@@ -288,10 +283,29 @@ def run_task(client: OpenAI, env: DebugEnvClient, task_name: str) -> tuple:
 
 def main() -> None:
     """Run inference across all tasks."""
+    print(f"[DEBUG] Initializing OpenAI client...", flush=True)
+    print(f"[DEBUG] API_BASE_URL={API_BASE_URL}", flush=True)
+    print(f"[DEBUG] API_KEY={'set (' + API_KEY[:8] + '...)' if API_KEY else 'NOT SET'}", flush=True)
+    print(f"[DEBUG] MODEL_NAME={MODEL_NAME}", flush=True)
+
     client = OpenAI(base_url=API_BASE_URL, api_key=API_KEY)
+
+    # Warmup: make a guaranteed LLM call BEFORE any environment interaction
+    # This ensures at least one API call goes through the proxy
+    try:
+        print("[DEBUG] Making warmup LLM call...", flush=True)
+        warmup = client.chat.completions.create(
+            model=MODEL_NAME,
+            messages=[{"role": "user", "content": "Say OK"}],
+            max_tokens=5,
+        )
+        print(f"[DEBUG] Warmup LLM call succeeded: {warmup.choices[0].message.content}", flush=True)
+    except Exception as exc:
+        print(f"[DEBUG] Warmup LLM call FAILED: {exc}", flush=True)
 
     # Connect to environment
     env_url = os.getenv("ENV_URL", "http://localhost:7860")
+    print(f"[DEBUG] ENV_URL={env_url}", flush=True)
     env = DebugEnvClient(env_url)
 
     all_success = True
