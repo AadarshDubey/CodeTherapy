@@ -312,9 +312,9 @@ export default function ExperimentPanel() {
           <div className="experiment-idle-icon">🧪</div>
           <h3>A/B Experiment: Does Reflection Help?</h3>
           <p>
-            Run the same debugging agent on the same task twice — once <strong style={{ color: '#f87171' }}>without</strong> reflection
-            scoring (blind mode) and once <strong style={{ color: '#22d3ee' }}>with</strong> reflection scoring.
-            See the dramatic difference in a story-driven demo.
+            Run the same debugging agent on the same task — the blind agent gets <strong style={{ color: '#f87171' }}>one shot</strong> with
+            no feedback, while the reflection agent gets <strong style={{ color: '#22d3ee' }}>up to 8 steps</strong> of iterative,
+            reflection-guided debugging. Can structured reasoning beat raw LLM intuition?
           </p>
           <div className="experiment-idle-features">
             <div className="experiment-feature">📊 Success Rate Comparison</div>
@@ -349,8 +349,8 @@ export default function ExperimentPanel() {
             🔴 Blind Agent (No Reflection Scoring)
           </h3>
           <p style={{ color: '#94a3b8', marginBottom: '1rem', fontSize: '0.85rem' }}>
-            The agent gets the same LLM, same prompt, same code — but receives <strong>no feedback</strong> on
-            reflection quality. Watch how hypotheses stay vague and fixes are untargeted.
+            The agent gets <strong>one single attempt</strong> — no iteration, no history, no reflection feedback.
+            A raw LLM code fix in one shot. This is the baseline to beat.
           </p>
           <p style={{ fontSize: '0.8rem', marginBottom: '1rem' }}>
             <span style={{ color: experimentData.blind.success ? '#4ade80' : '#fb7185' }}>
@@ -398,8 +398,9 @@ export default function ExperimentPanel() {
             🟢 Reflection Agent (LLM-as-a-Judge Scoring)
           </h3>
           <p style={{ color: '#94a3b8', marginBottom: '1rem', fontSize: '0.85rem' }}>
-            Same agent, same task — but now reflection quality is scored. Watch how hypotheses
-            become <strong>precise</strong> and fixes become <strong>targeted</strong>.
+            Same LLM, same task — but now with <strong>up to 8 iterative steps</strong>. Each step includes
+            a structured hypothesis scored by an LLM-as-a-Judge. Watch how reflection drives
+            the agent toward the <strong>root cause</strong>.
           </p>
           <p style={{ fontSize: '0.8rem', marginBottom: '1rem' }}>
             <span style={{ color: experimentData.reflection.success ? '#4ade80' : '#fb7185' }}>

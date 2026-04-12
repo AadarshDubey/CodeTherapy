@@ -2,19 +2,21 @@
 Experiment Runner — A/B comparison of agent with and without reflection scoring.
 
 Runs two complete debugging episodes on the same task:
-  1. Blind mode (no reflection scoring → flat 0.5 reward)
-  2. Reflection mode (full LLM-as-a-judge scoring)
+  1. Blind mode: Single-shot, no history, 1 step max
+  2. Reflection mode: Multi-turn conversation with iterative refinement, 8 steps
 
 Collects per-step metrics for visualization and comparison.
+Experiment order is randomized to avoid systematic bias.
 """
 
 import uuid
 import time
+import random
 from typing import Dict, Any, List, Optional
 
 from backend.engine.environment import DebugEnvironment
 from backend.models.action import DebugAction
-from backend.agent import get_agent_action
+from backend.agent import get_agent_action, get_blind_agent_action
 
 
 def _run_single_episode(
@@ -22,17 +24,7 @@ def _run_single_episode(
     use_reflection: bool,
     max_steps: int = 8,
 ) -> Dict[str, Any]:
-    """
-    Run one complete debugging episode.
-
-    Args:
-        task_name: Name of the task to run.
-        use_reflection: Whether to use LLM-as-a-judge reflection scoring.
-        max_steps: Maximum number of agent steps.
-
-    Returns:
-        Dictionary with episode results and per-step data.
-    """
+    """Run one complete debugging episode."""
     env = DebugEnvironment(use_reflection=use_reflection)
     obs = env.reset(task_name=task_name)
 
@@ -41,7 +33,7 @@ def _run_single_episode(
     initial_code = obs.buggy_code
 
     steps_data: List[Dict[str, Any]] = []
-    history_strs: List[str] = []
+    messages = None  # Multi-turn conversation state (reflection agent only)
     total_reflection_quality = 0.0
     total_code_correctness = 0.0
 
@@ -51,20 +43,32 @@ def _run_single_episode(
         if obs.done:
             break
 
-        # Get agent's action from the LLM
-        action_dict = get_agent_action(
-            buggy_code=buggy_code,
-            test_output=test_output,
-            step=step,
-            history=history_strs,
-        )
+        # Get agent's action
+        if use_reflection:
+            # Multi-turn: pass conversation history
+            action_dict, messages = get_agent_action(
+                buggy_code=buggy_code,
+                test_output=test_output,
+                step=step,
+                history=[],  # not used — messages handle history
+                messages=messages,
+                max_steps=max_steps,
+            )
+        else:
+            # Blind: single-turn, no history
+            action_dict = get_blind_agent_action(
+                buggy_code=buggy_code,
+                test_output=test_output,
+                step=step,
+                history=[],
+            )
 
-        # Execute step
+        # Execute step in environment
         action = DebugAction(
             edits=action_dict["edits"],
-            hypothesis=action_dict["hypothesis"],
-            action_description=action_dict["action_description"],
-            expected_result=action_dict["expected_result"],
+            hypothesis=action_dict.get("hypothesis", ""),
+            action_description=action_dict.get("action_description", ""),
+            expected_result=action_dict.get("expected_result", ""),
         )
 
         obs = env.step(action)
@@ -86,9 +90,9 @@ def _run_single_episode(
             "reward": round(reward, 4),
             "code_correctness": round(code_correctness, 4),
             "reflection_quality": round(reflection_quality, 4),
-            "hypothesis": action_dict["hypothesis"][:300],
-            "action_description": action_dict["action_description"][:300],
-            "expected_result": action_dict["expected_result"][:300],
+            "hypothesis": action_dict.get("hypothesis", "")[:300],
+            "action_description": action_dict.get("action_description", "")[:300],
+            "expected_result": action_dict.get("expected_result", "")[:300],
             "reflection_sub_scores": sub_scores,
             "done": obs.done,
             "error": obs.last_action_error,
@@ -98,9 +102,6 @@ def _run_single_episode(
         # Update for next iteration
         buggy_code = obs.buggy_code
         test_output = obs.test_output
-        history_strs.append(
-            f"Step {step}: {action_dict['hypothesis'][:80]} -> reward {reward:+.2f}"
-        )
 
         if obs.done:
             break
@@ -160,24 +161,18 @@ def _build_comparison(blind_result: Dict[str, Any], reflection_result: Dict[str,
 def run_experiment(task_name: str) -> Dict[str, Any]:
     """
     Run a full A/B experiment: blind mode vs reflection mode.
-
-    Args:
-        task_name: Name of the task to run both episodes on.
-
-    Returns:
-        Dictionary with both episode results and comparison metrics.
+    Order is randomized to avoid systematic bias.
     """
     experiment_id = str(uuid.uuid4())[:8]
 
-    blind_result = _run_single_episode(
-        task_name=task_name,
-        use_reflection=False,
-    )
+    run_blind_first = random.choice([True, False])
 
-    reflection_result = _run_single_episode(
-        task_name=task_name,
-        use_reflection=True,
-    )
+    if run_blind_first:
+        blind_result = _run_single_episode(task_name=task_name, use_reflection=False, max_steps=1)
+        reflection_result = _run_single_episode(task_name=task_name, use_reflection=True)
+    else:
+        reflection_result = _run_single_episode(task_name=task_name, use_reflection=True)
+        blind_result = _run_single_episode(task_name=task_name, use_reflection=False, max_steps=1)
 
     comparison = _build_comparison(blind_result, reflection_result)
 
@@ -189,6 +184,8 @@ def run_experiment(task_name: str) -> Dict[str, Any]:
         "comparison": comparison,
     }
 
+
+# ─── Streaming Version (for frontend SSE) ────────────────────────────
 
 def _run_single_episode_stream(
     task_name: str,
@@ -208,7 +205,7 @@ def _run_single_episode_stream(
     initial_code = obs.buggy_code
 
     steps_data: List[Dict[str, Any]] = []
-    history_strs: List[str] = []
+    messages = None  # Multi-turn conversation state
     total_reflection_quality = 0.0
     total_code_correctness = 0.0
 
@@ -226,20 +223,30 @@ def _run_single_episode_stream(
             "max_steps": max_steps,
         }
 
-        # Get agent's action from the LLM
-        action_dict = get_agent_action(
-            buggy_code=buggy_code,
-            test_output=test_output,
-            step=step,
-            history=history_strs,
-        )
+        # Get agent's action
+        if use_reflection:
+            action_dict, messages = get_agent_action(
+                buggy_code=buggy_code,
+                test_output=test_output,
+                step=step,
+                history=[],
+                messages=messages,
+                max_steps=max_steps,
+            )
+        else:
+            action_dict = get_blind_agent_action(
+                buggy_code=buggy_code,
+                test_output=test_output,
+                step=step,
+                history=[],
+            )
 
-        # Execute step
+        # Execute step in environment
         action = DebugAction(
             edits=action_dict["edits"],
-            hypothesis=action_dict["hypothesis"],
-            action_description=action_dict["action_description"],
-            expected_result=action_dict["expected_result"],
+            hypothesis=action_dict.get("hypothesis", ""),
+            action_description=action_dict.get("action_description", ""),
+            expected_result=action_dict.get("expected_result", ""),
         )
 
         obs = env.step(action)
@@ -261,16 +268,16 @@ def _run_single_episode_stream(
             "reward": round(reward, 4),
             "code_correctness": round(code_correctness, 4),
             "reflection_quality": round(reflection_quality, 4),
-            "hypothesis": action_dict["hypothesis"][:300],
-            "action_description": action_dict["action_description"][:300],
-            "expected_result": action_dict["expected_result"][:300],
+            "hypothesis": action_dict.get("hypothesis", "")[:300],
+            "action_description": action_dict.get("action_description", "")[:300],
+            "expected_result": action_dict.get("expected_result", "")[:300],
             "reflection_sub_scores": sub_scores,
             "done": obs.done,
             "error": obs.last_action_error,
         }
         steps_data.append(step_entry)
 
-        # Emit "step" event with full step data
+        # Emit "step" event
         yield {
             "type": "step",
             "mode": mode,
@@ -280,9 +287,6 @@ def _run_single_episode_stream(
         # Update for next iteration
         buggy_code = obs.buggy_code
         test_output = obs.test_output
-        history_strs.append(
-            f"Step {step}: {action_dict['hypothesis'][:80]} -> reward {reward:+.2f}"
-        )
 
         if obs.done:
             break
@@ -311,49 +315,49 @@ def _run_single_episode_stream(
         "final_code": obs.buggy_code,
     }
 
-    # Emit phase_end with summary
+    # Emit phase_end
     yield {
         "type": "phase_end",
         "mode": mode,
         "result": result,
     }
 
-    # Return result dict for the caller to aggregate
     return result
 
 
 def run_experiment_stream(task_name: str):
     """
     Generator that yields SSE events for the full A/B experiment.
-
-    Events yielded:
-      - phase_start: {type, mode, task_name}
-      - thinking:    {type, mode, step, max_steps}
-      - step:        {type, mode, data: {step details}}
-      - phase_end:   {type, mode, result: {episode summary}}
-      - complete:    {type, experiment_id, task_name, blind, reflection, comparison}
+    Order is randomized to avoid systematic bias.
     """
     experiment_id = str(uuid.uuid4())[:8]
 
-    # --- Blind episode ---
-    yield {"type": "phase_start", "mode": "blind", "task_name": task_name}
+    run_blind_first = random.choice([True, False])
+
+    episodes = [
+        ("blind", False),
+        ("reflection", True),
+    ]
+    if not run_blind_first:
+        episodes.reverse()
 
     blind_result = None
-    for event in _run_single_episode_stream(task_name, use_reflection=False):
-        yield event
-        if event["type"] == "phase_end":
-            blind_result = event["result"]
-
-    # --- Reflection episode ---
-    yield {"type": "phase_start", "mode": "reflection", "task_name": task_name}
-
     reflection_result = None
-    for event in _run_single_episode_stream(task_name, use_reflection=True):
-        yield event
-        if event["type"] == "phase_end":
-            reflection_result = event["result"]
 
-    # --- Final comparison ---
+    for mode_name, use_ref in episodes:
+        yield {"type": "phase_start", "mode": mode_name, "task_name": task_name}
+
+        # Blind: 1 shot. Reflection: 8 steps.
+        steps = 1 if mode_name == "blind" else 8
+        for event in _run_single_episode_stream(task_name, use_reflection=use_ref, max_steps=steps):
+            yield event
+            if event["type"] == "phase_end":
+                if mode_name == "blind":
+                    blind_result = event["result"]
+                else:
+                    reflection_result = event["result"]
+
+    # Final comparison
     if blind_result and reflection_result:
         comparison = _build_comparison(blind_result, reflection_result)
         yield {

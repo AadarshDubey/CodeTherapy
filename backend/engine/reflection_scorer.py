@@ -87,7 +87,7 @@ class ReflectionScorer:
                 ],
                 temperature=0.1,
                 max_tokens=256,
-                timeout=10.0
+                timeout=30.0
             )
             text = (completion.choices[0].message.content or "").strip()
             if "```json" in text:

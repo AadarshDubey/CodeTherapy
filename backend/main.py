@@ -201,22 +201,26 @@ async def api_auto_step(request: AutoStepRequest):
         test_output = f"Error executing code: {str(e)}"
     
     history_strs = [
-        f"Step {h['step']}: {h['hypothesis'][:80]} -> reward {h['combined_reward']:+.2f}"
+        f"Step {h['step']}: {h['hypothesis'][:80]} -> tests {h['tests_passed']}/{h['tests_total']}"
         for h in env.history
     ]
     
-    action_dict = get_agent_action(
+    if getattr(env, "messages", None) is None:
+        env.messages = None
+
+    action_dict, env.messages = get_agent_action(
         buggy_code=buggy_code,
         test_output=test_output,
         step=env.state.step_count + 1,
-        history=history_strs
+        history=history_strs,
+        messages=env.messages
     )
     
     action = DebugAction(
         edits=action_dict["edits"],
-        hypothesis=action_dict["hypothesis"],
-        action_description=action_dict["action_description"],
-        expected_result=action_dict["expected_result"],
+        hypothesis=action_dict.get("hypothesis", ""),
+        action_description=action_dict.get("action_description", ""),
+        expected_result=action_dict.get("expected_result", ""),
     )
     
     obs = env.step(action)

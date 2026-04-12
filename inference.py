@@ -272,8 +272,11 @@ def run_task(client: OpenAI, env: DebugEnvClient, task_name: str) -> tuple:
 
             log_step(step=step, action=action_str, reward=reward, done=done, error=error)
 
+            error_info = ""
+            if error:
+                error_info = f" ⚠️ EDITS REJECTED: {error[:100]}"
             history.append(
-                f"Step {step}: {response['hypothesis'][:80]} -> reward {reward:+.2f}"
+                f"Step {step}: {response['hypothesis'][:80]} -> tests {obs.get('tests_passed', 0)}/{obs.get('tests_total', 0)}{error_info}"
             )
 
             if done:
