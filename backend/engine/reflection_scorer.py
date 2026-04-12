@@ -48,7 +48,8 @@ class ReflectionScorer:
     """
     
     def __init__(self):
-        self.client = OpenAI(base_url=API_BASE_URL, api_key=API_KEY)
+        key = os.getenv("API_KEY") or os.getenv("HF_TOKEN") or API_KEY
+        self.client = OpenAI(base_url=API_BASE_URL, api_key=key or "not-set")
 
     def score(
         self,

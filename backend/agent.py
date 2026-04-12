@@ -21,8 +21,17 @@ API_KEY = os.getenv("API_KEY") or os.getenv("HF_TOKEN")
 API_BASE_URL = os.getenv("API_BASE_URL", "https://router.huggingface.co/v1")
 MODEL_NAME = os.getenv("MODEL_NAME", "Qwen/Qwen2.5-72B-Instruct")
 
-# Module-level client — reused across calls
-_client = OpenAI(base_url=API_BASE_URL, api_key=API_KEY)
+# Lazy-initialized client — created on first use so the server can
+# start even when API_KEY is not yet available (e.g. Docker startup).
+_client = None
+
+
+def _get_client() -> OpenAI:
+    global _client
+    if _client is None:
+        key = os.getenv("API_KEY") or os.getenv("HF_TOKEN") or API_KEY
+        _client = OpenAI(base_url=API_BASE_URL, api_key=key or "not-set")
+    return _client
 
 # ─── System Prompts ───────────────────────────────────────────────────
 
@@ -133,7 +142,7 @@ def get_agent_action(
         messages = [messages[0]] + messages[-12:]
     
     try:
-        completion = _client.chat.completions.create(
+        completion = _get_client().chat.completions.create(
             model=MODEL_NAME,
             messages=messages,
             temperature=0.3,
@@ -203,7 +212,7 @@ def get_blind_agent_action(
     """)
 
     try:
-        completion = _client.chat.completions.create(
+        completion = _get_client().chat.completions.create(
             model=MODEL_NAME,
             messages=[
                 {"role": "system", "content": BLIND_SYSTEM_PROMPT},
